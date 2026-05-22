@@ -1,0 +1,38 @@
+{
+  "name": "CourseEnrollment",
+  "type": "object",
+  "properties": {
+    "course_id": {
+      "type": "string",
+      "description": "ID kelas"
+    },
+    "course_title": {
+      "type": "string",
+      "description": "Judul kelas"
+    },
+    "student_id": {
+      "type": "string",
+      "description": "ID murid"
+    },
+    "student_name": {
+      "type": "string",
+      "description": "Nama murid"
+    },
+    "student_email": {
+      "type": "string",
+      "description": "Email murid"
+    },
+    "teacher_name": {
+      "type": "string",
+      "description": "Nama guru"
+    },
+    "joined_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "course_id",
+    "student_id"
+  ]
+}

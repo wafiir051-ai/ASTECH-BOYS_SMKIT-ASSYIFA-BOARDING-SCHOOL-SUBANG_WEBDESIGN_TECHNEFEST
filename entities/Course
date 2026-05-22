@@ -1,0 +1,58 @@
+{
+  "name": "Course",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Judul kelas/kursus"
+    },
+    "description": {
+      "type": "string",
+      "description": "Deskripsi kelas"
+    },
+    "subject": {
+      "type": "string",
+      "description": "Mata pelajaran/topik"
+    },
+    "cover_color": {
+      "type": "string",
+      "description": "Warna cover kelas"
+    },
+    "teacher_id": {
+      "type": "string",
+      "description": "ID guru pengampu"
+    },
+    "teacher_name": {
+      "type": "string",
+      "description": "Nama guru"
+    },
+    "class_code": {
+      "type": "string",
+      "description": "Kode unik untuk bergabung"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "archived"
+      ],
+      "default": "active"
+    },
+    "students": {
+      "type": "array",
+      "description": "Daftar ID murid yang terdaftar",
+      "items": {
+        "type": "string"
+      }
+    },
+    "announcement": {
+      "type": "string",
+      "description": "Pengumuman terbaru dari guru"
+    }
+  },
+  "required": [
+    "title",
+    "teacher_id",
+    "teacher_name"
+  ]
+}

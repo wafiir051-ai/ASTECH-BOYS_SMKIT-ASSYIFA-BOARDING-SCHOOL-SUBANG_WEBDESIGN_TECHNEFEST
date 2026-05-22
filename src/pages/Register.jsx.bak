@@ -1,0 +1,365 @@
+import { useState } from "react";
+import { supabase } from "@/api/supabaseClient";
+import { GraduationCap, BookOpen } from "lucide-react";
+const StudentIcon = GraduationCap;
+import { Link } from "react-router-dom";
+
+export default function Register() {
+  const [step, setStep] = useState(0); // 0=pilih role, 1=isi form, 2=verifikasi email
+  const [role, setRole] = useState("");
+  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [otp, setOtp] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (password !== confirm) { setError("Password tidak cocok."); return; }
+    if (password.length < 6) { setError("Password minimal 6 karakter."); return; }
+    setLoading(true);
+    try {
+      sessionStorage.setItem("pending_insert", "1");
+      const { data: signUpData, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName, role } },
+      });
+      if (error) {
+        sessionStorage.removeItem("pending_insert");
+        throw error;
+      }
+      const authUser = signUpData?.user;
+      if (authUser?.id) {
+        const { error: insertError } = await supabase.from("User").insert({
+          email: authUser.email || email,
+          full_name: fullName || (authUser.email || email).split("@")[0],
+          role: role,
+          auth_id: authUser.id,
+        });
+        if (insertError && insertError.code !== "23505") {
+          sessionStorage.removeItem("pending_insert");
+          throw insertError;
+        }
+      }
+      sessionStorage.removeItem("pending_insert");
+      window.location.href = "/";
+    } catch (err) {
+      setError(err.message || "Pendaftaran gagal. Coba lagi.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      const { error, data: verifyData } = await supabase.auth.verifyOtp({ email, token: otp, type: "signup" });
+      if (error) throw error;
+      // Insert langsung ke tabel User tanpa lewat choose-role
+      const userId = verifyData?.user?.id;
+      const userEmail = verifyData?.user?.email;
+      if (userId) {
+        await supabase.from("User").upsert({
+          id: userId,
+          email: userEmail,
+          name: name || userEmail?.split("@")[0] || "User",
+          role: role,
+        });
+      }
+      sessionStorage.removeItem("pending_role");
+      window.location.href = "/";
+    } catch {
+      setError("Kode OTP salah atau kadaluarsa.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    await supabase.auth.resend({ type: "signup", email });
+  };
+
+  const handleGoogle = async () => {
+    // Role wajib dipilih sebelum lanjut dengan Google
+    if (!role) {
+      setError("Pilih peran kamu dulu sebelum daftar dengan Google.");
+      return;
+    }
+    try {
+      setError("");
+      setLoading(true);
+
+      // Simpan pending_role SEBELUM redirect OAuth.
+      // ChooseRole.jsx akan membacanya setelah redirect balik.
+      // PENTING: jangan hapus ini sebelum insert ke DB berhasil.
+      sessionStorage.setItem("pending_role", role);
+      if (fullName) {
+        sessionStorage.setItem("pending_name", fullName);
+      }
+
+      const { error: err } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/choose-role`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (err) {
+        console.error("Google OAuth Error:", err);
+        sessionStorage.removeItem("pending_role");
+        sessionStorage.removeItem("pending_name");
+        setError(err.message || "Gagal daftar dengan Google. Coba lagi.");
+        setLoading(false);
+      }
+      // Jika tidak ada error, browser akan redirect ke Google.
+      // Tidak perlu setLoading(false) karena halaman akan meninggalkan aplikasi.
+    } catch (e) {
+      console.error("Google register exception:", e);
+      sessionStorage.removeItem("pending_role");
+      sessionStorage.removeItem("pending_name");
+      setError("Terjadi kesalahan. Coba lagi.");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-navy flex items-center justify-center p-8">
+      <div className="w-full max-w-sm">
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-9 h-9 bg-vibrant-blue flex items-center justify-center">
+            <GraduationCap className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-white font-display text-xl font-bold">EduSpace</span>
+        </div>
+
+        {/* ─── STEP 0: Pilih Role ─── */}
+        {step === 0 && (
+          <>
+            <p className="text-lavender/60 text-xs font-editorial uppercase tracking-widest mb-3">Langkah 1 dari 3</p>
+            <h2 className="text-white text-3xl font-display font-bold tracking-tight mb-3">Kamu siapa?</h2>
+            <p className="text-white/40 text-sm font-editorial mb-10">Pilih peran kamu di EduSpace. Ini tidak bisa diubah nanti.</p>
+
+            <div className="space-y-4 mb-10">
+              <button
+                onClick={() => setRole("student")}
+                className={`w-full p-5 border text-left transition-all flex items-center gap-4 ${
+                  role === "student" ? "border-vibrant-blue bg-vibrant-blue/10" : "border-white/20 hover:border-white/40"
+                }`}
+              >
+                <div className={`w-10 h-10 flex items-center justify-center flex-shrink-0 ${
+                  role === "student" ? "bg-vibrant-blue" : "bg-white/10"
+                }`}>
+                  <StudentIcon className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm">Murid</p>
+                  <p className="text-white/40 text-xs font-editorial mt-0.5">Ikuti kelas, kerjakan tugas, lihat nilai</p>
+                </div>
+                {role === "student" && (
+                  <div className="ml-auto w-4 h-4 rounded-full bg-vibrant-blue flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-white" />
+                  </div>
+                )}
+              </button>
+
+              <button
+                onClick={() => setRole("teacher")}
+                className={`w-full p-5 border text-left transition-all flex items-center gap-4 ${
+                  role === "teacher" ? "border-vibrant-blue bg-vibrant-blue/10" : "border-white/20 hover:border-white/40"
+                }`}
+              >
+                <div className={`w-10 h-10 flex items-center justify-center flex-shrink-0 ${
+                  role === "teacher" ? "bg-vibrant-blue" : "bg-white/10"
+                }`}>
+                  <BookOpen className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm">Guru</p>
+                  <p className="text-white/40 text-xs font-editorial mt-0.5">Buat kelas, beri tugas, nilai murid</p>
+                </div>
+                {role === "teacher" && (
+                  <div className="ml-auto w-4 h-4 rounded-full bg-vibrant-blue flex items-center justify-center">
+                    <div className="w-2 h-2 rounded-full bg-white" />
+                  </div>
+                )}
+              </button>
+            </div>
+
+            {error && <p className="text-red-400 text-sm font-editorial mb-4">{error}</p>}
+
+            <button
+              onClick={() => role && setStep(1)}
+              disabled={!role}
+              className="w-full h-11 bg-white text-navy text-xs font-bold uppercase tracking-widest hover:bg-white/90 transition-all disabled:opacity-30 disabled:cursor-not-allowed mb-4"
+            >
+              Daftar Akun Baru
+            </button>
+
+            {/* Tombol Google tersedia langsung di step 0 setelah role dipilih */}
+            <button
+              onClick={handleGoogle}
+              disabled={!role || loading}
+              className="w-full h-11 bg-transparent border border-white/20 text-white text-sm font-editorial hover:border-white/40 transition-all flex items-center justify-center gap-3 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <span>Menghubungkan ke Google...</span>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  Daftar dengan Google sebagai {role === "teacher" ? "Guru" : "Murid"}
+                </>
+              )}
+            </button>
+
+            <p className="text-center text-white/30 text-sm font-editorial mt-8">
+              Sudah punya akun?{" "}
+              <Link to="/login" className="text-vibrant-blue hover:text-vibrant-blue/80">Masuk</Link>
+            </p>
+          </>
+        )}
+
+        {/* ─── STEP 1: Isi Form Email/Password ─── */}
+        {step === 1 && (
+          <>
+            <div className="flex items-center gap-2 mb-3">
+              <button onClick={() => setStep(0)} className="text-white/40 hover:text-white transition-colors text-xs font-editorial">← Kembali</button>
+            </div>
+            <p className="text-lavender/60 text-xs font-editorial uppercase tracking-widest mb-3">
+              Langkah 2 dari 3 · {role === "teacher" ? "Guru" : "Murid"}
+            </p>
+            <h2 className="text-white text-3xl font-display font-bold tracking-tight mb-10">Buat Akun Baru</h2>
+
+            <form onSubmit={handleRegister} className="space-y-7">
+              <div>
+                <label className="block text-xs font-editorial text-lavender/60 mb-2">Nama Lengkap</label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                  className="w-full bg-transparent border-b border-white/20 focus:border-b-2 focus:border-vibrant-blue outline-none text-white text-base font-editorial pb-3 h-12 placeholder:text-white/20 transition-all"
+                  placeholder="Nama kamu"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-editorial text-lavender/60 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="w-full bg-transparent border-b border-white/20 focus:border-b-2 focus:border-vibrant-blue outline-none text-white text-base font-editorial pb-3 h-12 placeholder:text-white/20 transition-all"
+                  placeholder="email@kamu.com"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-editorial text-lavender/60 mb-2">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full bg-transparent border-b border-white/20 focus:border-b-2 focus:border-vibrant-blue outline-none text-white text-base font-editorial pb-3 h-12 placeholder:text-white/20 transition-all"
+                  placeholder="Min. 6 karakter"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-editorial text-lavender/60 mb-2">Konfirmasi Password</label>
+                <input
+                  type="password"
+                  value={confirm}
+                  onChange={e => setConfirm(e.target.value)}
+                  className="w-full bg-transparent border-b border-white/20 focus:border-b-2 focus:border-vibrant-blue outline-none text-white text-base font-editorial pb-3 h-12 placeholder:text-white/20 transition-all"
+                  placeholder="Ulangi password"
+                  required
+                />
+              </div>
+              {error && <p className="text-red-400 text-sm font-editorial">{error}</p>}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 bg-white text-navy text-xs font-bold uppercase tracking-widest hover:bg-white/90 transition-all disabled:opacity-50"
+              >
+                {loading ? "Mendaftarkan..." : "Daftar"}
+              </button>
+            </form>
+
+            <div className="flex items-center gap-4 my-6">
+              <div className="flex-1 h-px bg-white/10" />
+              <span className="text-white/30 text-xs font-editorial">atau</span>
+              <div className="flex-1 h-px bg-white/10" />
+            </div>
+
+            <button
+              onClick={handleGoogle}
+              disabled={loading}
+              className="w-full h-11 bg-transparent border border-white/20 text-white text-sm font-editorial hover:border-white/40 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Daftar dengan Google sebagai {role === "teacher" ? "Guru" : "Murid"}
+            </button>
+          </>
+        )}
+
+        {/* ─── STEP 2: Verifikasi OTP ─── */}
+        {step === 2 && (
+          <>
+            <p className="text-lavender/60 text-xs font-editorial uppercase tracking-widest mb-3">Langkah 3 dari 3</p>
+            <h2 className="text-white text-3xl font-display font-bold tracking-tight mb-4">Cek Email Kamu</h2>
+            <p className="text-white/50 text-sm font-editorial mb-10">
+              Kode OTP telah dikirim ke <span className="text-white">{email}</span>
+            </p>
+            <form onSubmit={handleVerify} className="space-y-7">
+              <div>
+                <label className="block text-xs font-editorial text-lavender/60 mb-2">Kode OTP</label>
+                <input
+                  value={otp}
+                  onChange={e => setOtp(e.target.value)}
+                  className="w-full bg-transparent border-b border-white/20 focus:border-b-2 focus:border-vibrant-blue outline-none text-white text-2xl text-center font-bold pb-3 h-14 placeholder:text-white/20 tracking-[0.5em] transition-all"
+                  placeholder="000000"
+                  maxLength={6}
+                  required
+                />
+              </div>
+              {error && <p className="text-red-400 text-sm font-editorial">{error}</p>}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-11 bg-white text-navy text-xs font-bold uppercase tracking-widest hover:bg-white/90 transition-all disabled:opacity-50"
+              >
+                {loading ? "Memverifikasi..." : "Verifikasi"}
+              </button>
+              <button
+                type="button"
+                onClick={handleResend}
+                className="w-full text-white/40 text-sm font-editorial hover:text-white/70 transition-colors"
+              >
+                Kirim ulang kode
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

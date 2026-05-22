@@ -1,0 +1,74 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Asteroids</title>
+<style>*{margin:0;padding:0}body{background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:monospace;color:#fff}
+#ui{position:absolute;top:10px;left:0;right:0;display:flex;justify-content:space-between;padding:0 20px;font-size:14px;letter-spacing:2px;pointer-events:none}
+canvas{border:1px solid rgba(255,255,255,0.1)}
+#msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+</style></head><body>
+<div id="ui"><span>SCORE: <b id="sc">0</b></span><span>LIVES: <b id="lv">3</b></span><span>LEVEL: <b id="lv2">1</b></span></div>
+<canvas id="c"></canvas>
+<div id="msg"><p style="font-size:22px;color:#34d399;letter-spacing:4px;font-weight:bold">ASTEROIDS</p><p style="margin-top:8px;font-size:12px;color:rgba(255,255,255,0.5)">WASD / ARROW KEYS · SPACE = TEMBAK</p><p style="margin-top:16px;font-size:13px;color:#34d399;cursor:pointer" onclick="startGame()">▶ MULAI</p></div>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+cv.width=Math.min(window.innerWidth-40,800);cv.height=Math.min(window.innerHeight-40,600);
+const W=cv.width,H=cv.height;
+let ship,bullets,asteroids,score,lives,level,running,animId,keys={};
+
+function startGame(){document.getElementById('msg').style.display='none';score=0;lives=3;level=1;running=true;
+  ship={x:W/2,y:H/2,vx:0,vy:0,angle:0,invincible:0};bullets=[];asteroids=[];
+  for(let i=0;i<4+level;i++)spawnAsteroid(3);
+  document.getElementById('sc').textContent=0;document.getElementById('lv').textContent=3;document.getElementById('lv2').textContent=1;
+  cancelAnimationFrame(animId);loop();}
+
+function spawnAsteroid(size,x,y){
+  const angle=Math.random()*Math.PI*2,speed=(Math.random()*1+0.5)*(4-size)*0.5+0.5;
+  if(!x){do{x=Math.random()*W;y=Math.random()*H;}while(Math.hypot(x-ship.x,y-ship.y)<100);}
+  asteroids.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,size,r:size*16,angle:0,rot:(Math.random()-0.5)*0.05,pts:Array.from({length:10},(_,i)=>{const a=i/10*Math.PI*2,v=0.8+Math.random()*0.4;return[Math.cos(a)*v,Math.sin(a)*v];})});}
+
+function loop(){animId=requestAnimationFrame(loop);ctx.fillStyle='rgba(0,0,0,0.15)';ctx.fillRect(0,0,W,H);
+  if(!running)return;
+  // Ship
+  if(keys['ArrowLeft']||keys['a'])ship.angle-=0.05;
+  if(keys['ArrowRight']||keys['d'])ship.angle+=0.05;
+  if(keys['ArrowUp']||keys['w']){ship.vx+=Math.cos(ship.angle)*0.15;ship.vy+=Math.sin(ship.angle)*0.15;}
+  ship.vx*=0.99;ship.vy*=0.99;
+  ship.x=(ship.x+ship.vx+W)%W;ship.y=(ship.y+ship.vy+H)%H;
+  if(ship.invincible>0)ship.invincible--;
+
+  // Draw ship
+  if(ship.invincible%10<7){
+    ctx.save();ctx.translate(ship.x,ship.y);ctx.rotate(ship.angle);
+    ctx.strokeStyle='#34d399';ctx.lineWidth=2;ctx.beginPath();
+    ctx.moveTo(15,0);ctx.lineTo(-10,8);ctx.lineTo(-6,0);ctx.lineTo(-10,-8);ctx.closePath();ctx.stroke();
+    if(keys['ArrowUp']||keys['w']){ctx.strokeStyle='#f59e0b';ctx.beginPath();ctx.moveTo(-6,0);ctx.lineTo(-16+Math.random()*6,0);ctx.stroke();}
+    ctx.restore();}
+
+  // Bullets
+  bullets=bullets.filter(b=>{b.x+=b.vx;b.y+=b.vy;b.life--;
+    b.x=(b.x+W)%W;b.y=(b.y+H)%H;
+    ctx.fillStyle='#fbbf24';ctx.beginPath();ctx.arc(b.x,b.y,2,0,Math.PI*2);ctx.fill();
+    return b.life>0;});
+
+  // Asteroids
+  const toSplit=[];
+  asteroids=asteroids.filter(a=>{a.x=(a.x+a.vx+W)%W;a.y=(a.y+a.vy+H)%H;a.angle+=a.rot;
+    ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.angle);ctx.strokeStyle='#94a3b8';ctx.lineWidth=1.5;
+    ctx.beginPath();a.pts.forEach(([px,py],i)=>{i===0?ctx.moveTo(px*a.r,py*a.r):ctx.lineTo(px*a.r,py*a.r);});ctx.closePath();ctx.stroke();ctx.restore();
+    // Bullet collision
+    let hit=false;
+    bullets=bullets.filter(b=>{if(Math.hypot(b.x-a.x,b.y-a.y)<a.r){hit=true;return false;}return true;});
+    if(hit){score+=a.size===3?20:a.size===2?50:100;document.getElementById('sc').textContent=score;
+      if(a.size>1)toSplit.push(a);return false;}
+    // Ship collision
+    if(ship.invincible===0&&Math.hypot(ship.x-a.x,ship.y-a.y)<a.r+10){
+      lives--;document.getElementById('lv').textContent=lives;ship.invincible=120;
+      ship.vx=0;ship.vy=0;ship.x=W/2;ship.y=H/2;
+      if(lives<=0){running=false;const m=document.getElementById('msg');m.style.display='block';m.innerHTML=`<p style="font-size:22px;color:#f87171;letter-spacing:4px">GAME OVER</p><p style="margin-top:8px;font-size:20px;color:#fff">SCORE: ${score}</p><p style="margin-top:16px;font-size:13px;color:#34d399;cursor:pointer" onclick="startGame()">↺ MAIN LAGI</p>`;}}
+    return true;});
+  toSplit.forEach(a=>{for(let i=0;i<2;i++)spawnAsteroid(a.size-1,a.x+Math.random()*20-10,a.y+Math.random()*20-10);});
+  if(asteroids.length===0){level++;document.getElementById('lv2').textContent=level;for(let i=0;i<4+level;i++)spawnAsteroid(3);}
+}
+
+document.addEventListener('keydown',e=>{keys[e.key]=true;if(e.key===' '&&running){e.preventDefault();bullets.push({x:ship.x+Math.cos(ship.angle)*15,y:ship.y+Math.sin(ship.angle)*15,vx:Math.cos(ship.angle)*8+ship.vx,vy:Math.sin(ship.angle)*8+ship.vy,life:60});}});
+document.addEventListener('keyup',e=>{keys[e.key]=false;});
+loop();
+</script></body></html>

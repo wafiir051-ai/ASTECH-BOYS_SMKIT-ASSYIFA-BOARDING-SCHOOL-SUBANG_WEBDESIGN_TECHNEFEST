@@ -1,0 +1,87 @@
+{
+  "name": "Assignment",
+  "type": "object",
+  "properties": {
+    "course_id": {
+      "type": "string",
+      "description": "ID kelas"
+    },
+    "course_title": {
+      "type": "string",
+      "description": "Judul kelas"
+    },
+    "title": {
+      "type": "string",
+      "description": "Judul tugas"
+    },
+    "description": {
+      "type": "string",
+      "description": "Instruksi tugas"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "assignment",
+        "quiz",
+        "material"
+      ],
+      "default": "assignment",
+      "description": "Jenis konten"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Batas pengumpulan"
+    },
+    "max_score": {
+      "type": "number",
+      "default": 100,
+      "description": "Nilai maksimum"
+    },
+    "attachment_url": {
+      "type": "string",
+      "description": "URL lampiran"
+    },
+    "attachment_name": {
+      "type": "string",
+      "description": "Nama file lampiran"
+    },
+    "quiz_questions": {
+      "type": "array",
+      "description": "Soal-soal kuis",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "correct_answer": {
+            "type": "number"
+          },
+          "points": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "teacher_id": {
+      "type": "string"
+    },
+    "published": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "course_id",
+    "title",
+    "type",
+    "teacher_id"
+  ]
+}

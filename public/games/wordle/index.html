@@ -1,0 +1,87 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Wordle ID</title>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a1a;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:monospace;color:#fff;padding:16px}
+h1{font-size:22px;color:#34d399;letter-spacing:4px;margin-bottom:4px}
+p.sub{font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:2px;margin-bottom:16px}
+#grid{display:grid;grid-template-rows:repeat(6,52px);gap:6px;margin-bottom:16px}
+.row{display:grid;grid-template-columns:repeat(5,52px);gap:6px}
+.box{width:52px;height:52px;border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:bold;text-transform:uppercase;transition:background 0.4s}
+.box.correct{background:#34d399;border-color:#34d399;color:#022c22}
+.box.present{background:#fbbf24;border-color:#fbbf24;color:#000}
+.box.absent{background:#374151;border-color:#374151}
+.box.active{border-color:rgba(255,255,255,0.5)}
+#keyboard{display:flex;flex-direction:column;gap:6px;align-items:center}
+.krow{display:flex;gap:5px}
+.key{min-width:32px;height:42px;padding:0 6px;background:#374151;border:none;color:#fff;font-size:12px;font-weight:bold;cursor:pointer;border-radius:3px;font-family:monospace;transition:background 0.2s}
+.key:hover{background:#4b5563}
+.key.correct{background:#34d399;color:#022c22}
+.key.present{background:#fbbf24;color:#000}
+.key.absent{background:#1f2937}
+#msg{height:22px;font-size:14px;font-weight:bold;margin-bottom:8px;color:#f59e0b}
+</style></head><body>
+<h1>📝 WORDLE</h1>
+<p class="sub">TEBAK KATA 5 HURUF · 6 KESEMPATAN</p>
+<div id="msg"></div>
+<div id="grid"></div>
+<div id="keyboard"></div>
+<script>
+const WORDS=['BESAR','KECIL','CEPAT','LAMBAT','MERAH','HITAM','PUTIH','HIJAU','BIRU','KUNING','KERAS','LUNAK','DINGIN','PANAS','MANIS','PAHIT','ASIN','PEDAS','GELAP','TERANG','PADAT','CAIR','KERAS','LEBAR','SEMPIT','TINGGI','RENDAH','BERAT','RINGAN','KASAR','HALUS','BASAH','KERING','BARU','LAMA','MUDA','TUA','JAUH','DEKAT','DALAM','DANGKAL','PENUH','KOSONG','TAJAM','TUMPUL','MULUS','BULAT','LURUS','BENGKOK','TIPIS'];
+const ROWS=6,COLS=5;
+let target,grid,cur,guesses,done,keyStates;
+
+function init(){
+  target=WORDS[Math.floor(Math.random()*WORDS.length)];
+  grid=Array(ROWS).fill(0).map(()=>Array(COLS).fill(''));
+  cur=0;guesses=[];done=false;keyStates={};
+  document.getElementById('msg').textContent='';
+  renderGrid();renderKeyboard();
+}
+
+function renderGrid(){
+  const g=document.getElementById('grid');g.innerHTML='';
+  for(let r=0;r<ROWS;r++){const row=document.createElement('div');row.className='row';
+    for(let c=0;c<COLS;c++){const box=document.createElement('div');box.className='box';
+      const ch=grid[r][c];box.textContent=ch;
+      if(r<guesses.length){const st=guesses[r][c];if(st)box.classList.add(st);}
+      else if(r===cur&&ch)box.classList.add('active');
+      row.appendChild(box);}g.appendChild(row);}
+}
+
+function renderKeyboard(){
+  const keys=[['Q','W','E','R','T','Y','U','I','O','P'],['A','S','D','F','G','H','J','K','L'],['ENTER','Z','X','C','V','B','N','M','⌫']];
+  const kb=document.getElementById('keyboard');kb.innerHTML='';
+  keys.forEach(row=>{const r=document.createElement('div');r.className='krow';
+    row.forEach(k=>{const btn=document.createElement('button');btn.className='key';btn.textContent=k;btn.style.minWidth=k.length>1?'52px':'32px';
+      const st=keyStates[k];if(st)btn.classList.add(st);
+      btn.onclick=()=>type(k);r.appendChild(btn);});kb.appendChild(r);});
+}
+
+function type(k){
+  if(done)return;
+  if(k==='⌫'||k==='Backspace'){const r=grid[cur];let i=r.findLastIndex(c=>c!=='');if(i>=0){r[i]='';renderGrid();}return;}
+  if(k==='ENTER'||k==='Enter'){
+    const word=grid[cur].join('');
+    if(word.length<5){document.getElementById('msg').textContent='Kurang dari 5 huruf!';return;}
+    const result=Array(5).fill('absent');const ta=[...target],wr=[...word];
+    // Correct
+    wr.forEach((c,i)=>{if(c===ta[i]){result[i]='correct';ta[i]=null;wr[i]=null;}});
+    // Present
+    wr.forEach((c,i)=>{if(c&&ta.includes(c)){result[i]='present';ta[ta.indexOf(c)]=null;}});
+    guesses.push(result);
+    // Update key states
+    word.split('').forEach((c,i)=>{const prev=keyStates[c];const s=result[i];
+      if(!prev||prev==='absent'||(prev==='present'&&s==='correct'))keyStates[c]=s;});
+    cur++;renderGrid();renderKeyboard();
+    if(word===target){done=true;document.getElementById('msg').textContent='🎉 BENAR! Kata: '+target;return;}
+    if(cur===ROWS){done=true;document.getElementById('msg').textContent='❌ Kata: '+target;}
+    document.getElementById('msg').textContent='';
+    return;}
+  if(grid[cur].filter(c=>c!=='').length<5){const i=grid[cur].indexOf('');grid[cur][i]=k.toUpperCase();renderGrid();}
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter')type('Enter');
+  else if(e.key==='Backspace')type('Backspace');
+  else if(/^[a-zA-Z]$/.test(e.key))type(e.key.toUpperCase());
+});
+init();
+</script></body></html>

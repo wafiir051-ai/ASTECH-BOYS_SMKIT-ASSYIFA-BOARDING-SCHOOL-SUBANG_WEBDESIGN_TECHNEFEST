@@ -1,0 +1,356 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 240 6% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 220 25% 90%;
+    --secondary-foreground: 240 6% 10%;
+    --muted: 220 20% 95%;
+    --muted-foreground: 240 4% 43%;
+    --accent: 220 30% 88%;
+    --accent-foreground: 240 6% 10%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 20% 87%;
+    --input: 220 20% 87%;
+    --ring: 240 6% 10%;
+    --radius: 0rem;
+    --navy: 248 14% 11%;
+    --navy-elevated: 256 30% 16%;
+    --vibrant-blue: 240 100% 47%;
+    --ios-blue: 211 100% 50%;
+    --lavender: 219 35% 86%;
+    --light-blue-gray: 220 37% 87%;
+    --pale-blue: 220 41% 91%;
+    --medium-gray: 240 2% 43%;
+    --muted-purple-gray: 237 6% 55%;
+    --sidebar-background: 248 14% 11%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 240 100% 47%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 256 30% 16%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 256 20% 20%;
+    --sidebar-ring: 240 100% 47%;
+  }
+  .dark {
+    --background: 248 14% 11%;
+    --foreground: 0 0% 98%;
+    --card: 248 14% 11%;
+    --card-foreground: 0 0% 98%;
+    --popover: 256 30% 16%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 248 14% 11%;
+    --secondary: 256 30% 16%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 256 20% 20%;
+    --muted-foreground: 237 6% 55%;
+    --accent: 256 30% 16%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 256 20% 20%;
+    --input: 256 20% 20%;
+    --ring: 220 35% 86%;
+  }
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  h1,h2,h3,h4,h5,h6 {
+    font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+}
+
+/* ── Typography ── */
+.font-display  { font-family: 'Source Sans 3', sans-serif; font-weight: 700; letter-spacing: -0.03em; }
+.font-editorial{ font-family: Georgia, serif; font-weight: 500; }
+.font-body     { font-family: 'Source Sans 3', sans-serif; font-weight: 400; }
+
+/* ── Noomo Card ── */
+.noomo-card {
+  background: hsl(var(--navy));
+  border: 1px solid hsl(var(--lavender) / 0.3);
+  border-radius: 0;
+  color: #fff;
+}
+.noomo-card-light {
+  background: #fff;
+  border: 1px solid hsl(var(--lavender));
+  border-radius: 0;
+  color: #000;
+}
+
+/* ── Button ── */
+.noomo-btn-primary {
+  background: hsl(var(--navy));
+  color: #fff;
+  font-family: 'Source Sans 3', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  height: 43px;
+  padding: 1px 24px;
+  border-radius: 100px;
+  border: none;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.noomo-btn-primary:hover { background: #0F0D15; transform: translateY(-1px); }
+
+/* ── Input ── */
+.noomo-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid hsl(var(--medium-gray));
+  border-radius: 0;
+  padding: 1px 2px 12px 2px;
+  height: 50px;
+  font-family: Georgia, serif;
+  font-size: 16px;
+  color: #000;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.noomo-input:focus { border-bottom: 2px solid hsl(var(--vibrant-blue)); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: hsl(var(--navy)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--lavender) / 0.4); border-radius: 3px; }
+
+/* ── Line clamp ── */
+.line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.line-clamp-3 { display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+
+/* ════════════════════════════════════════
+   ANIMATIONS
+   ════════════════════════════════════════ */
+
+/* Fade-in up (page enter) */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.anim-fade-up {
+  animation: fadeUp 0.45s cubic-bezier(.22,1,.36,1) both;
+}
+
+/* Staggered children */
+.anim-stagger > * { animation: fadeUp 0.45s cubic-bezier(.22,1,.36,1) both; }
+.anim-stagger > *:nth-child(1)  { animation-delay: 0.04s; }
+.anim-stagger > *:nth-child(2)  { animation-delay: 0.09s; }
+.anim-stagger > *:nth-child(3)  { animation-delay: 0.14s; }
+.anim-stagger > *:nth-child(4)  { animation-delay: 0.19s; }
+.anim-stagger > *:nth-child(5)  { animation-delay: 0.24s; }
+.anim-stagger > *:nth-child(6)  { animation-delay: 0.29s; }
+.anim-stagger > *:nth-child(7)  { animation-delay: 0.34s; }
+.anim-stagger > *:nth-child(8)  { animation-delay: 0.39s; }
+.anim-stagger > *:nth-child(n+9){ animation-delay: 0.44s; }
+
+/* Scale-in */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.93); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.anim-scale-in { animation: scaleIn 0.35s cubic-bezier(.22,1,.36,1) both; }
+
+/* Slide-in from left */
+@keyframes slideLeft {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.anim-slide-left { animation: slideLeft 0.4s cubic-bezier(.22,1,.36,1) both; }
+
+/* Pulse glow */
+@keyframes pulseGlow {
+  0%,100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); }
+  50%      { box-shadow: 0 0 16px 4px rgba(52,211,153,0.18); }
+}
+.anim-pulse-glow { animation: pulseGlow 2.8s ease-in-out infinite; }
+
+/* Shimmer skeleton */
+@keyframes shimmer {
+  from { background-position: -600px 0; }
+  to   { background-position: 600px 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 600px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* Float decoration */
+@keyframes float {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+.anim-float { animation: float 4s ease-in-out infinite; }
+
+/* Rotate slow */
+@keyframes rotateSlow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.anim-rotate { animation: rotateSlow 12s linear infinite; }
+
+/* Counter tick */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.anim-count { animation: countUp 0.6s cubic-bezier(.22,1,.36,1) both; }
+
+/* Underline grow */
+@keyframes underlineGrow {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+
+/* ── Interactive hover helpers ── */
+.hover-lift { transition: transform 0.2s, box-shadow 0.2s !important; }
+.hover-lift:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,0.1); }
+
+.hover-glow { transition: box-shadow 0.25s !important; }
+.hover-glow:hover { box-shadow: 0 0 0 2px rgba(52,211,153,0.35), 0 4px 20px rgba(52,211,153,0.12); }
+
+.hover-scale { transition: transform 0.18s !important; }
+.hover-scale:hover { transform: scale(1.03); }
+
+/* ── Decorative orb ── */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(1px);
+}
+
+/* ── Page wrapper ── */
+.page-enter {
+  animation: fadeUp 0.4s cubic-bezier(.22,1,.36,1) both;
+}
+
+/* ── Responsive helpers ── */
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+  .stack-mobile { flex-direction: column !important; }
+  .full-mobile  { width: 100% !important; }
+}
+@media (min-width: 769px) {
+  .hide-desktop { display: none !important; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL RESPONSIVE FIXES (Fase 1)
+   Fix cross-browser issues for Safari iOS, Chrome mobile, tablets
+   ═══════════════════════════════════════════════════════════════ */
+
+@layer base {
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Cegah horizontal scroll global */
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  /* Box sizing universal */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  /* Hilangkan tap highlight biru di iOS, ganti dengan transition halus */
+  button, a, [role="button"], input, select, textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Cegah text size auto-adjust Safari iOS saat rotasi orientasi */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Cegah zoom otomatis Safari iOS saat focus input */
+  /* iOS auto-zoom kalau font-size < 16px */
+  input:not([type="range"]),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+
+  /* Image & video responsive default */
+  img, video, svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Long text break supaya tidak overflow horizontal */
+  p, span, h1, h2, h3, h4, h5, h6, div, a, li, td {
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+}
+
+/* ─── Fix Safari iOS 100vh issue ─────────────────────────────────
+   Safari iOS hitung 100vh termasuk address bar.
+   Pakai svh/dvh untuk yang dinamis, fallback ke vh.
+   ────────────────────────────────────────────────────────────── */
+@supports (height: 100dvh) {
+  .min-h-screen, .h-screen {
+    min-height: 100dvh;
+  }
+}
+
+/* ─── Touch target minimum 44px (Apple HIG, A11y) ──────────────── */
+@media (hover: none) and (pointer: coarse) {
+  button, a, [role="button"] {
+    min-height: 36px;
+  }
+}
+
+/* ─── Hide scrollbar tapi tetap bisa scroll (untuk slider/carousel) ─ */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Smooth scroll untuk anchor links ─────────────────────────── */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ─── Safe area padding helper (untuk iPhone notch/home indicator) ─ */
+.safe-bottom {
+  padding-bottom: var(--safe-bottom);
+}
+.safe-top {
+  padding-top: var(--safe-top);
+}

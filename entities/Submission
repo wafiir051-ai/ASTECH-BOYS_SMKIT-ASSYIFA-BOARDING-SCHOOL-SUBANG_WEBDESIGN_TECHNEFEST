@@ -1,0 +1,79 @@
+{
+  "name": "Submission",
+  "type": "object",
+  "properties": {
+    "assignment_id": {
+      "type": "string",
+      "description": "ID tugas/kuis"
+    },
+    "course_id": {
+      "type": "string",
+      "description": "ID kelas"
+    },
+    "student_id": {
+      "type": "string",
+      "description": "ID murid"
+    },
+    "student_name": {
+      "type": "string",
+      "description": "Nama murid"
+    },
+    "student_email": {
+      "type": "string",
+      "description": "Email murid"
+    },
+    "content": {
+      "type": "string",
+      "description": "Teks jawaban / catatan pengumpulan"
+    },
+    "attachment_url": {
+      "type": "string",
+      "description": "URL file yang dikumpulkan"
+    },
+    "attachment_name": {
+      "type": "string",
+      "description": "Nama file"
+    },
+    "quiz_answers": {
+      "type": "array",
+      "description": "Jawaban kuis",
+      "items": {
+        "type": "object",
+        "properties": {
+          "question_index": {
+            "type": "number"
+          },
+          "selected_answer": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "score": {
+      "type": "number",
+      "description": "Nilai yang diberikan"
+    },
+    "feedback": {
+      "type": "string",
+      "description": "Komentar dari guru"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "submitted",
+        "graded",
+        "returned"
+      ],
+      "default": "submitted"
+    },
+    "submitted_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "assignment_id",
+    "course_id",
+    "student_id"
+  ]
+}

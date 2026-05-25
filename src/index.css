@@ -354,3 +354,38 @@ html {
 .safe-top {
   padding-top: var(--safe-top);
 }
+
+/* ===== THEME VARIABLES ===== */
+:root[data-theme="light"] {
+  --bg-main: #edf2ef;
+  --bg-overlay: rgba(237,242,239,0.72);
+  --bg-card: #ffffff;
+  --bg-topbar: rgba(237,242,239,0.9);
+  --bg-sidebar: #ffffff;
+  --text-primary: #111111;
+  --text-secondary: rgba(0,0,0,0.5);
+  --text-muted: #6b7280;
+  --border: rgba(6,78,59,0.1);
+  --border-card: rgba(0,0,0,0.07);
+  --accent: #059669;
+  --accent-light: rgba(5,150,105,0.08);
+  --input-bg: #f9fafb;
+  --hover-bg: rgba(16,185,129,0.04);
+}
+
+:root[data-theme="dark"] {
+  --bg-main: #0a0f0d;
+  --bg-overlay: rgba(10,15,13,0.72);
+  --bg-card: #111815;
+  --bg-topbar: rgba(15,22,18,0.9);
+  --bg-sidebar: #0d1512;
+  --text-primary: #f0f4f2;
+  --text-secondary: rgba(255,255,255,0.5);
+  --text-muted: #9ca3af;
+  --border: rgba(52,211,153,0.12);
+  --border-card: rgba(52,211,153,0.08);
+  --accent: #34d399;
+  --accent-light: rgba(52,211,153,0.08);
+  --input-bg: rgba(255,255,255,0.05);
+  --hover-bg: rgba(52,211,153,0.06);
+}

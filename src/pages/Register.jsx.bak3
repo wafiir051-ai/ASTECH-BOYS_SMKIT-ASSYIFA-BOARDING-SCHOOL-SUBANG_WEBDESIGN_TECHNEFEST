@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/api/supabaseClient";
 import { Link } from "react-router-dom";
-import { GraduationCap, BookOpen, X } from "lucide-react";
+import { GraduationCap, BookOpen } from "lucide-react";
 import * as THREE from "three";
 
 function ThreeBG() {
@@ -121,94 +121,6 @@ function ThreeBG() {
   return <div ref={mountRef} style={{ position:"fixed", inset:0, width:"100vw", height:"100vh", zIndex:0, pointerEvents:"none" }} />;
 }
 
-
-function OTPModal({ email, onVerified, onCancel }) {
-  const [otp, setOtp] = useState(["","","","","","","",""]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(60);
-  const inputRefs = useRef([]);
-
-  useEffect(() => {
-    inputRefs.current[0]?.focus();
-    const timer = setInterval(() => {
-      setResendCooldown(v => v > 0 ? v - 1 : 0);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const handleChange = (idx, val) => {
-    if (!/^\d*$/.test(val)) return;
-    const newOtp = [...otp];
-    newOtp[idx] = val.slice(-1);
-    setOtp(newOtp);
-    if (val && idx < 7) inputRefs.current[idx + 1]?.focus();
-  };
-
-  const handleKeyDown = (idx, e) => {
-    if (e.key === "Backspace" && !otp[idx] && idx > 0) {
-      inputRefs.current[idx - 1]?.focus();
-    }
-  };
-
-  const handlePaste = (e) => {
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 8);
-    if (pasted.length === 8) {
-      setOtp(pasted.split(""));
-      inputRefs.current[7]?.focus();
-    }
-  };
-
-  const handleVerify = async () => {
-    const token = otp.join("");
-    if (token.length < 8) { setError("Masukkan 8 digit OTP."); return; }
-    setLoading(true); setError("");
-    try {
-      const { error } = await supabase.auth.verifyOtp({ email, token, type: "signup" });
-      if (error) throw error;
-      onVerified();
-    } catch (err) {
-      setError(err.message || "OTP salah atau kadaluarsa.");
-    } finally { setLoading(false); }
-  };
-
-  const handleResend = async () => {
-    if (resendCooldown > 0) return;
-    setError("");
-    try {
-      await supabase.auth.resend({ email, type: "signup" });
-      setResendCooldown(60);
-      setOtp(["","","","","","","",""]);
-      inputRefs.current[0]?.focus();
-    } catch { setError("Gagal kirim ulang OTP."); }
-  };
-
-  return (
-    <div style={{ position:"fixed", inset:0, zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.7)", backdropFilter:"blur(8px)" }}>
-      <div style={{ background:"rgba(2,15,10,0.95)", border:"1px solid rgba(52,211,153,0.2)", borderRadius:20, padding:"36px 32px", width:"100%", maxWidth:420, boxShadow:"0 24px 80px rgba(0,0,0,0.6)", position:"relative" }}>
-        <button onClick={onCancel} style={{ position:"absolute", top:16, right:16, background:"none", border:"none", cursor:"pointer", color:"rgba(255,255,255,0.4)" }}><X size={18} /></button>
-        <div style={{ textAlign:"center", marginBottom:24 }}>
-          <div style={{ width:56, height:56, borderRadius:"50%", background:"rgba(52,211,153,0.1)", border:"1px solid rgba(52,211,153,0.25)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
-            <span style={{ fontSize:24 }}>📧</span>
-          </div>
-          <h2 style={{ fontFamily:"Georgia,serif", fontSize:24, color:"#fff", margin:"0 0 8px", fontWeight:"normal" }}>Verifikasi Email</h2>
-          <p style={{ fontSize:13, color:"rgba(255,255,255,0.4)", margin:0, lineHeight:1.6 }}>Kode OTP 8 digit telah dikirim ke<br /><span style={{ color:"#34d399", fontWeight:600 }}>{email}</span></p>
-        </div>
-        {error && <div style={{ background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.25)", borderRadius:8, padding:"10px 14px", fontSize:13, color:"#f87171", marginBottom:16, textAlign:"center" }}>{error}</div>}
-        <div style={{ display:"flex", gap:8, justifyContent:"center", marginBottom:24 }} onPaste={handlePaste}>
-          {otp.map((digit, idx) => (
-            <input key={idx} ref={el => inputRefs.current[idx] = el} type="text" inputMode="numeric" maxLength={1} value={digit} onChange={e => handleChange(idx, e.target.value)} onKeyDown={e => handleKeyDown(idx, e)} style={{ width:42, height:52, textAlign:"center", fontSize:20, fontWeight:700, background:"rgba(255,255,255,0.05)", border:`1.5px solid ${digit ? "rgba(52,211,153,0.5)" : "rgba(255,255,255,0.1)"}`, borderRadius:10, color:"#fff", outline:"none", fontFamily:"Inter,sans-serif" }} />
-          ))}
-        </div>
-        <button onClick={handleVerify} disabled={loading} style={{ width:"100%", background:"linear-gradient(135deg,#059669,#34d399)", color:"#022c22", border:"none", borderRadius:10, padding:"13px", fontFamily:"Inter,sans-serif", fontSize:11, fontWeight:700, letterSpacing:"2px", textTransform:"uppercase", cursor:"pointer", marginBottom:16, opacity: loading ? 0.7 : 1 }}>{loading ? "Memverifikasi..." : "Verifikasi"}</button>
-        <p style={{ textAlign:"center", fontSize:12, color:"rgba(255,255,255,0.3)", margin:0 }}>Tidak menerima kode?{" "}
-          <button onClick={handleResend} disabled={resendCooldown > 0} style={{ background:"none", border:"none", cursor: resendCooldown > 0 ? "default" : "pointer", color: resendCooldown > 0 ? "rgba(255,255,255,0.2)" : "#34d399", fontWeight:600, fontSize:12, fontFamily:"Inter,sans-serif", padding:0 }}>{resendCooldown > 0 ? `Kirim ulang (${resendCooldown}s)` : "Kirim ulang"}</button>
-        </p>
-      </div>
-    </div>
-  );
-}
-
 export default function Register() {
   const [role, setRole] = useState("");
   const [email, setEmail] = useState("");
@@ -220,8 +132,6 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [showOTP, setShowOTP] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState("");
 
   useEffect(() => { setTimeout(() => setMounted(true), 80); }, []);
 
@@ -235,39 +145,17 @@ export default function Register() {
     setLoading(true);
     try {
       sessionStorage.setItem("pending_insert", "1");
-      sessionStorage.setItem("pending_role", role);
-      sessionStorage.setItem("pending_name", fullName);
       const { data: signUpData, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, role } } });
-      if (error) { sessionStorage.removeItem("pending_insert"); sessionStorage.removeItem("pending_role"); sessionStorage.removeItem("pending_name"); throw error; }
-      setPendingEmail(email);
-      setShowOTP(true);
+      if (error) { sessionStorage.removeItem("pending_insert"); throw error; }
+      const authUser = signUpData?.user;
+      if (authUser?.id) {
+        const { error: insertError } = await supabase.from("User").insert({ email: authUser.email || email, full_name: fullName || (authUser.email||email).split("@")[0], role, auth_id: authUser.id });
+        if (insertError && insertError.code !== "23505") { sessionStorage.removeItem("pending_insert"); throw insertError; }
+      }
+      sessionStorage.removeItem("pending_insert");
+      window.location.href = "/";
     } catch (err) { setError(err.message || "Pendaftaran gagal. Coba lagi."); }
     finally { setLoading(false); }
-  };
-
-  const handleOTPVerified = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.id) {
-        const pendingRole = sessionStorage.getItem("pending_role") || role;
-        const pendingName = sessionStorage.getItem("pending_name") || fullName;
-        const { error: insertError } = await supabase.from("User").insert({ email: user.email, full_name: pendingName, role: pendingRole, auth_id: user.id });
-        if (insertError && insertError.code !== "23505") throw insertError;
-      }
-    } catch (err) { console.error("Insert user error:", err); }
-    finally {
-      sessionStorage.removeItem("pending_insert");
-      sessionStorage.removeItem("pending_role");
-      sessionStorage.removeItem("pending_name");
-      window.location.href = "/";
-    }
-  };
-
-  const handleOTPCancel = () => {
-    setShowOTP(false);
-    sessionStorage.removeItem("pending_insert");
-    sessionStorage.removeItem("pending_role");
-    sessionStorage.removeItem("pending_name");
   };
 
   const handleGoogle = async () => {
@@ -301,8 +189,6 @@ export default function Register() {
       `}</style>
 
       <ThreeBG />
-
-      {showOTP && <OTPModal email={pendingEmail} onVerified={handleOTPVerified} onCancel={handleOTPCancel} />}
 
       {/* Glassmorphism card */}
       <div style={{

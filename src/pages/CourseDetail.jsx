@@ -17,27 +17,38 @@ function AssignmentItem({ item, role: _role, courseId }) {
   const cfg = typeConfig[item.type] || typeConfig.assignment;
 
   return (
-    <Link to={`/courses/${courseId}/assignments/${item.id}`} className="block">
+    <div className="block">
       <NoomoCard className="p-4 flex items-center gap-4 hover:border-vibrant-blue/40 transition-all">
-        <div className={`w-10 h-10 flex-shrink-0 flex items-center justify-center ${
-          item.type === "quiz" ? "bg-amber-100 text-amber-700" 
-          : item.type === "material" ? "bg-emerald-100 text-emerald-700"
-          : "bg-vibrant-blue/10 text-vibrant-blue"
-        }`}>
-          {item.type === "material" ? <FileText className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground">{item.title}</p>
-          {item.due_date && (
-            <p className="text-xs text-medium-gray font-editorial mt-0.5 flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {format(new Date(item.due_date), "dd MMM yyyy, HH:mm", { locale: idLocale })}
-            </p>
-          )}
-        </div>
-        <NoomoBadge variant={cfg.color} className="">{cfg.label}</NoomoBadge>
+        <Link to={`/courses/${courseId}/assignments/${item.id}`} className="flex items-center gap-4 flex-1 min-w-0">
+          <div className={`w-10 h-10 flex-shrink-0 flex items-center justify-center ${
+            item.type === "quiz" ? "bg-amber-100 text-amber-700" 
+            : item.type === "material" ? "bg-emerald-100 text-emerald-700"
+            : "bg-vibrant-blue/10 text-vibrant-blue"
+          }`}>
+            {item.type === "material" ? <FileText className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-foreground">{item.title}</p>
+            {item.due_date && (
+              <p className="text-xs text-medium-gray font-editorial mt-0.5 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {format(new Date(item.due_date), "dd MMM yyyy, HH:mm", { locale: idLocale })}
+              </p>
+            )}
+          </div>
+          <NoomoBadge variant={cfg.color} className="">{cfg.label}</NoomoBadge>
+        </Link>
+        {item.type === "quiz" && (
+          <Link
+            to={`/game/${item.id}/lobby`}
+            onClick={e => e.stopPropagation()}
+            style={{ flexShrink:0, padding:"6px 14px", borderRadius:20, background:"linear-gradient(135deg,#a78bfa,#6d28d9)", color:"#fff", fontSize:12, fontWeight:700, textDecoration:"none", whiteSpace:"nowrap", boxShadow:"0 2px 12px rgba(167,139,250,0.4)" }}
+          >
+            🎮 Main Bareng
+          </Link>
+        )}
       </NoomoCard>
-    </Link>
+    </div>
   );
 }
 

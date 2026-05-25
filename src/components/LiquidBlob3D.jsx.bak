@@ -1,0 +1,137 @@
+import { useEffect, useRef } from "react";
+import * as THREE from "three";
+
+export default function LiquidBlob3D({ size = 180 }) {
+  const mountRef = useRef(null);
+
+  useEffect(() => {
+    const mount = mountRef.current;
+    if (!mount) return;
+
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+    camera.position.z = 4;
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(size, size);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+    mount.appendChild(renderer.domElement);
+
+    // Blob geometry — high detail sphere for smooth distortion
+    const geometry = new THREE.IcosahedronGeometry(1.2, 32);
+    const originalPositions = geometry.attributes.position.array.slice();
+
+    // Iridescent shader material
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uColorA: { value: new THREE.Color("#10b981") }, // emerald
+        uColorB: { value: new THREE.Color("#06b6d4") }, // cyan
+        uColorC: { value: new THREE.Color("#8b5cf6") }, // purple
+      },
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vPosition = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform float uTime;
+        uniform vec3 uColorA;
+        uniform vec3 uColorB;
+        uniform vec3 uColorC;
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+
+        void main() {
+          vec3 viewDir = normalize(cameraPosition - vPosition);
+          float fresnel = pow(1.0 - dot(vNormal, viewDir), 2.0);
+
+          float t = sin(uTime * 0.5 + vPosition.y * 2.0) * 0.5 + 0.5;
+          vec3 col1 = mix(uColorA, uColorB, t);
+          vec3 col2 = mix(col1, uColorC, fresnel);
+
+          // Glossy highlight
+          vec3 light = normalize(vec3(0.5, 1.0, 0.8));
+          float spec = pow(max(dot(vNormal, light), 0.0), 8.0);
+
+          vec3 finalColor = col2 + vec3(spec * 0.4);
+          gl_FragColor = vec4(finalColor, 0.95);
+        }
+      `,
+      transparent: true,
+    });
+
+    const blob = new THREE.Mesh(geometry, material);
+    scene.add(blob);
+
+    // Simplex-like noise function for distortion
+    function noise3D(x, y, z, t) {
+      return (
+        Math.sin(x * 2.0 + t) * 0.3 +
+        Math.cos(y * 2.5 + t * 0.8) * 0.3 +
+        Math.sin(z * 2.0 + t * 1.2) * 0.3
+      );
+    }
+
+    // Animation loop
+    let frameId;
+    const clock = new THREE.Clock();
+
+    const animate = () => {
+      const elapsed = clock.getElapsedTime();
+      material.uniforms.uTime.value = elapsed;
+
+      // Liquid distortion
+      const positions = geometry.attributes.position.array;
+      for (let i = 0; i < positions.length; i += 3) {
+        const ox = originalPositions[i];
+        const oy = originalPositions[i + 1];
+        const oz = originalPositions[i + 2];
+        const dist = noise3D(ox, oy, oz, elapsed * 0.6) * 0.15;
+        const len = Math.sqrt(ox * ox + oy * oy + oz * oz);
+        positions[i] = ox + (ox / len) * dist;
+        positions[i + 1] = oy + (oy / len) * dist;
+        positions[i + 2] = oz + (oz / len) * dist;
+      }
+      geometry.attributes.position.needsUpdate = true;
+      geometry.computeVertexNormals();
+
+      // Slow rotation
+      blob.rotation.x = elapsed * 0.15;
+      blob.rotation.y = elapsed * 0.25;
+
+      renderer.render(scene, camera);
+      frameId = requestAnimationFrame(animate);
+    };
+    animate();
+
+    // Cleanup
+    return () => {
+      cancelAnimationFrame(frameId);
+      geometry.dispose();
+      material.dispose();
+      renderer.dispose();
+      if (mount.contains(renderer.domElement)) {
+        mount.removeChild(renderer.domElement);
+      }
+    };
+  }, [size]);
+
+  return (
+    <div
+      ref={mountRef}
+      style={{
+        width: size,
+        height: size,
+        pointerEvents: "none",
+        filter: "drop-shadow(0 0 20px rgba(52,211,153,0.4))",
+      }}
+    />
+  );
+}

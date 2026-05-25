@@ -194,7 +194,7 @@ export default function QuizBuilder() {
                   <input
                     type="number"
                     min="1"
-                    max="100"
+                   
                     className="w-14 text-center text-sm font-bold border border-border py-1 outline-none focus:border-vibrant-blue"
                     value={q.points}
                     onChange={e => updateQuestion(qi, "points", Number(e.target.value))}

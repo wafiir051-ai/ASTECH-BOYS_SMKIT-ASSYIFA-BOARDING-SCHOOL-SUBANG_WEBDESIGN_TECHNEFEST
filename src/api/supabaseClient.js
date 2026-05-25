@@ -51,6 +51,62 @@ const makeEntity = (tableName) => ({
   },
 });
 
+export const gameAPI = {
+  createRoom: async (assignmentId, hostEmail, hostName) => {
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const { data, error } = await supabase
+      .from('game_rooms')
+      .insert({ code, assignment_id: assignmentId, host_email: hostEmail, host_name: hostName, status: 'waiting' })
+      .select().single();
+    if (error) throw error;
+    return data;
+  },
+  getRoom: async (code) => {
+    const { data, error } = await supabase
+      .from('game_rooms').select('*').eq('code', code.toUpperCase()).single();
+    if (error) throw error;
+    return data;
+  },
+  updateRoom: async (code, payload) => {
+    const { error } = await supabase
+      .from('game_rooms').update(payload).eq('code', code);
+    if (error) throw error;
+  },
+  joinRoom: async (code, playerEmail, playerName, isHost = false) => {
+    const { data, error } = await supabase
+      .from('game_players')
+      .upsert({ room_code: code.toUpperCase(), player_email: playerEmail, player_name: playerName, is_host: isHost, score: 0, streak: 0, answers: [] }, { onConflict: 'room_code,player_email' })
+      .select().single();
+    if (error) throw error;
+    return data;
+  },
+  getPlayers: async (code) => {
+    const { data, error } = await supabase
+      .from('game_players').select('*').eq('room_code', code.toUpperCase()).order('score', { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+  updatePlayer: async (code, playerEmail, payload) => {
+    const { error } = await supabase
+      .from('game_players').update(payload).eq('room_code', code).eq('player_email', playerEmail);
+    if (error) throw error;
+  },
+  deleteRoom: async (code) => {
+    await supabase.from('game_players').delete().eq('room_code', code);
+    await supabase.from('game_rooms').delete().eq('code', code);
+  },
+  subscribeRoom: (code, onRoom, onPlayers) => {
+    const channel = supabase.channel(`room:${code}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_rooms', filter: `code=eq.${code}` }, payload => onRoom(payload.new))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_players', filter: `room_code=eq.${code}` }, () => {
+        supabase.from('game_players').select('*').eq('room_code', code).order('score', { ascending: false })
+          .then(({ data }) => onPlayers(data || []));
+      })
+      .subscribe();
+    return channel;
+  },
+};
+
 export const entities = {
   // Course punya method tambahan findByClassCode untuk murid join kelas
   Course: {

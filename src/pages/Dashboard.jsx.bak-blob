@@ -4,7 +4,6 @@ import { entities } from "@/api/supabaseClient";
 import { BookOpen, ClipboardList, Users, ArrowRight, CheckCircle, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import LiquidBlob3D from "@/components/LiquidBlob3D";
 
 function useFadeIn(delay = 0) {
   const [go, setGo] = useState(false);
@@ -90,18 +89,7 @@ export default function Dashboard() {
       ];
 
   return (
-    <div style={{ position:"relative", display:"flex", flexDirection:"column", gap:isMobile?14:20 }}>
-      {/* Background 3D Composition - Cinema 4D vibe */}
-      <div style={{ position:"fixed", top:"15%", right:"-5%", pointerEvents:"none", zIndex:0, opacity:0.55 }}>
-        <LiquidBlob3D size={isMobile?220:420} shape="crystal" speed={0.8} colors={["#06b6d4","#8b5cf6","#ec4899"]} />
-      </div>
-      <div style={{ position:"fixed", bottom:"5%", left:"-5%", pointerEvents:"none", zIndex:0, opacity:0.45 }}>
-        <LiquidBlob3D size={isMobile?200:380} shape="torus" speed={0.6} colors={["#34d399","#fbbf24","#ec4899"]} />
-      </div>
-      <div style={{ position:"fixed", top:"55%", left:"40%", pointerEvents:"none", zIndex:0, opacity:0.35, transform:"translate(-50%,-50%)" }}>
-        <LiquidBlob3D size={isMobile?160:280} shape="blob" speed={1} colors={["#fbbf24","#ec4899","#06b6d4"]} />
-      </div>
-      <div style={{ position:"relative", zIndex:1, display:"flex", flexDirection:"column", gap:isMobile?14:20 }}>
+    <div style={{ display:"flex", flexDirection:"column", gap:isMobile?14:20 }}>
       <style>{`
         @keyframes shimmerBar { from{transform:translateX(-100%)} to{transform:translateX(200%)} }
         @keyframes orbFloat   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
@@ -228,7 +216,6 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-    </div>
     </div>
   );
 }

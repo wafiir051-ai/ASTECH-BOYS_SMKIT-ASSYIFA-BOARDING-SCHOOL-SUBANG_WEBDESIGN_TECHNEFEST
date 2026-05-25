@@ -1,3 +1,4 @@
+import confetti from "canvas-confetti";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useOutletContext, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,10 +11,235 @@ import { id as idLocale } from "date-fns/locale";
 
 
 // ─── QUIZ TAKER — Full Screen + Anti-Cheat ───────────────────────────────────
+// ─── SOUND EFFECTS (Web Audio API, no library needed) ────────────
+function useSounds() {
+  const ctx = useRef(null);
+  const getCtx = () => {
+    if (!ctx.current) ctx.current = new (window.AudioContext || window.webkitAudioContext)();
+    return ctx.current;
+  };
+
+  const playTone = (freq, type, duration, volume = 0.3, delay = 0) => {
+    try {
+      const ac = getCtx();
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ac.currentTime + delay);
+      gain.gain.setValueAtTime(volume, ac.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + delay + duration);
+      osc.start(ac.currentTime + delay);
+      osc.stop(ac.currentTime + delay + duration);
+    } catch(e) {}
+  };
+
+  return {
+    beep: () => playTone(880, "sine", 0.12, 0.25),
+    mulai: () => {
+      playTone(523, "sine", 0.1, 0.3, 0);
+      playTone(659, "sine", 0.1, 0.3, 0.1);
+      playTone(784, "sine", 0.2, 0.35, 0.2);
+    },
+    click: () => playTone(440, "sine", 0.08, 0.15),
+    correct: () => {
+      playTone(523, "sine", 0.12, 0.3, 0);
+      playTone(659, "sine", 0.12, 0.3, 0.1);
+      playTone(784, "sine", 0.25, 0.35, 0.2);
+    },
+    wrong: () => {
+      playTone(300, "sawtooth", 0.1, 0.2, 0);
+      playTone(220, "sawtooth", 0.2, 0.2, 0.1);
+    },
+    finish: () => {
+      [523,659,784,1047].forEach((f, i) => playTone(f, "sine", 0.3, 0.3, i * 0.12));
+    },
+  };
+}
+
+// ─── COUNTDOWN SCREEN (Quizizz-style 3-2-1-MULAI) ──────────────
+function CountdownScreen({ onComplete, onBeep, onMulai }) {
+  const [step, setStep] = useState(0); // 0=3, 1=2, 2=1, 3=MULAI
+
+  useEffect(() => {
+    if (step < 3) {
+      onBeep && onBeep();
+      const t = setTimeout(() => setStep(s => s + 1), 1000);
+      return () => clearTimeout(t);
+    } else {
+      onMulai && onMulai();
+      const t = setTimeout(() => onComplete(), 900);
+      return () => clearTimeout(t);
+    }
+  }, [step]);
+
+  const display = step < 3 ? (3 - step) : "MULAI!";
+  const showStart = step === 3;
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999,
+      background: "radial-gradient(ellipse at center, #1a0a2e 0%, #0a0a0f 70%)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      overflow: "hidden",
+    }}>
+      {/* Animated background gradient orbs */}
+      <div style={{ position:"absolute", top:"20%", left:"15%", width:300, height:300, borderRadius:"50%", background:"radial-gradient(circle, rgba(124,58,237,0.3), transparent 70%)", filter:"blur(40px)", animation:"floatOrb 4s ease-in-out infinite" }} />
+      <div style={{ position:"absolute", bottom:"20%", right:"15%", width:280, height:280, borderRadius:"50%", background:"radial-gradient(circle, rgba(167,139,250,0.25), transparent 70%)", filter:"blur(40px)", animation:"floatOrb 4s ease-in-out infinite 1s" }} />
+
+      {/* Main number/text */}
+      {!showStart ? (
+        <div key={step} style={{
+          fontSize: "clamp(180px, 28vw, 320px)",
+          fontWeight: 900,
+          color: "#fff",
+          textShadow: "0 0 60px rgba(167,139,250,0.8), 0 0 120px rgba(124,58,237,0.5)",
+          animation: "countPop 1s cubic-bezier(.22,1,.36,1)",
+          lineHeight: 1,
+          fontFamily: "Georgia, serif",
+          letterSpacing: "-0.05em",
+        }}>
+          {display}
+        </div>
+      ) : (
+        <div style={{
+          fontSize: "clamp(80px, 14vw, 180px)",
+          fontWeight: 900,
+          color: "#fff",
+          textShadow: "0 0 60px rgba(167,139,250,0.9), 0 0 120px rgba(124,58,237,0.6)",
+          animation: "startBounce 0.9s cubic-bezier(.22,1,.36,1)",
+          letterSpacing: "0.1em",
+          background: "linear-gradient(135deg, #fff 0%, #c4b5fd 50%, #fff 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+        }}>
+          MULAI!
+        </div>
+      )}
+
+      <style>{`
+        @keyframes countPop {
+          0% { transform: scale(0.3); opacity: 0; }
+          50% { transform: scale(1.15); opacity: 1; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes startBounce {
+          0% { transform: scale(0.5) rotate(-5deg); opacity: 0; }
+          50% { transform: scale(1.2) rotate(2deg); opacity: 1; }
+          100% { transform: scale(1) rotate(0); opacity: 1; }
+        }
+        @keyframes floatOrb {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(20px, -20px); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ─── RESULT SCREEN (Upgraded) ──────────────────────────────────
+function ResultScreen({ score, correct, total, pct, grade, points, questions, cheatLog, submitPending, onBack, maxStreak }) {
+  const [displayScore, setDisplayScore] = useState(0);
+  const [showContent, setShowContent] = useState(false);
+
+  useEffect(() => {
+    // Confetti burst saat result muncul
+    setTimeout(() => {
+      try {
+        confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, colors: ["#fbbf24","#a78bfa","#34d399","#f87171","#60a5fa","#ec4899"] });
+        setTimeout(() => confetti({ particleCount: 80, spread: 120, origin: { y: 0.6, x: 0.2 }, colors: ["#fbbf24","#f97316"] }), 300);
+        setTimeout(() => confetti({ particleCount: 80, spread: 120, origin: { y: 0.6, x: 0.8 }, colors: ["#a78bfa","#ec4899"] }), 600);
+      } catch(e) {}
+    }, 400);
+
+    // Score count-up animation
+    const duration = 1800;
+    const steps = 60;
+    const increment = score / steps;
+    let current = 0;
+    let step = 0;
+    const timer = setInterval(() => {
+      step++;
+      current = Math.min(Math.round(increment * step), score);
+      setDisplayScore(current);
+      if (step >= steps) { clearInterval(timer); setShowContent(true); }
+    }, duration / steps);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"radial-gradient(ellipse at 50% 30%, #1a0a2e 0%, #0a0a0f 70%)", zIndex:9999, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-start", overflowY:"auto", padding:"40px 20px" }}>
+      <style>{`
+        @keyframes gradeIn { 0%{transform:scale(0) rotate(-20deg);opacity:0} 60%{transform:scale(1.2) rotate(5deg);opacity:1} 100%{transform:scale(1) rotate(0);opacity:1} }
+        @keyframes fadeUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+        @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,0.4)} 50%{box-shadow:0 0 0 20px rgba(167,139,250,0)} }
+      `}</style>
+      <div style={{ width:"100%", maxWidth:560, textAlign:"center" }}>
+        {/* Grade Badge */}
+        <div style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", width:120, height:120, borderRadius:"50%", background:`radial-gradient(circle, ${grade.color}33, transparent)`, border:`4px solid ${grade.color}`, boxShadow:`0 0 40px ${grade.glow}, 0 0 80px ${grade.glow}44`, marginBottom:16, animation:"gradeIn 0.8s cubic-bezier(.22,1,.36,1)", fontSize:64, fontWeight:900, color:grade.color, fontFamily:"Georgia,serif" }}>
+          {grade.label}
+        </div>
+        <div style={{ fontSize:16, fontWeight:800, color:grade.color, letterSpacing:3, marginBottom:8, textTransform:"uppercase", textShadow:`0 0 20px ${grade.glow}` }}>{grade.desc}</div>
+
+        {/* Score Count-up */}
+        <div style={{ fontSize:"clamp(80px,15vw,120px)", fontWeight:900, lineHeight:1, margin:"12px 0 4px", background:"linear-gradient(135deg, #a78bfa, #60a5fa)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", fontFamily:"Georgia,serif" }}>
+          {displayScore.toLocaleString()}
+        </div>
+        <p style={{ color:"#6b6b8a", fontSize:15, marginBottom:8 }}>{correct}/{total} benar · {pct}%</p>
+        {maxStreak >= 3 && (
+          <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(251,191,36,0.12)", border:"1px solid rgba(251,191,36,0.3)", borderRadius:20, padding:"6px 16px", marginBottom:12, fontSize:13, color:"#fbbf24", fontWeight:700 }}>
+            🔥 Best Streak: {maxStreak}x
+          </div>
+        )}
+
+        {/* Cheat log */}
+        {cheatLog.length > 0 && showContent && (
+          <div style={{ background:"rgba(239,68,68,0.12)", border:"1px solid rgba(239,68,68,0.35)", borderRadius:12, padding:"14px 18px", marginBottom:20, textAlign:"left", animation:"fadeUp 0.5s ease" }}>
+            <p style={{ color:"#f87171", fontWeight:700, fontSize:13, margin:"0 0 8px" }}>⚠️ {cheatLog.length} pelanggaran terdeteksi & dilaporkan ke guru</p>
+            {cheatLog.map((c, i) => (
+              <p key={i} style={{ color:"#fca5a5", fontSize:11, margin:"3px 0" }}>• Soal {c.question}: {c.reason}</p>
+            ))}
+          </div>
+        )}
+
+        {/* Question breakdown */}
+        {showContent && (
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:24, animation:"fadeUp 0.6s ease" }}>
+            {questions.map((q, i) => (
+              <div key={i} style={{ background:points[i]>0?"rgba(16,185,129,0.1)":"rgba(239,68,68,0.1)", border:`1px solid ${points[i]>0?"rgba(16,185,129,0.3)":"rgba(239,68,68,0.3)"}`, borderRadius:10, padding:"10px 14px", display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:16 }}>{points[i]>0?"✅":"❌"}</span>
+                <div>
+                  <p style={{ fontSize:11, fontWeight:700, color:points[i]>0?"#34d399":"#f87171", margin:0 }}>Soal {i+1}</p>
+                  <p style={{ fontSize:12, color:points[i]>0?"#6ee7b7":"#fca5a5", margin:0 }}>{points[i]>0?`+${points[i]} poin`:"Salah"}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {submitPending && <p style={{ color:"#6b6b8a", fontSize:13, marginBottom:12 }}>Menyimpan hasil...</p>}
+        {showContent && (
+          <button
+            onClick={onBack}
+            disabled={submitPending}
+            style={{ padding:"14px 40px", borderRadius:14, border:"none", background:"linear-gradient(135deg, #a78bfa, #60a5fa)", color:"white", fontSize:16, fontWeight:800, cursor:submitPending?"not-allowed":"pointer", opacity:submitPending?0.5:1, boxShadow:"0 8px 32px rgba(167,139,250,0.4)", animation:"fadeUp 0.7s ease", transition:"transform 0.2s" }}
+            onMouseEnter={e => e.currentTarget.style.transform="translateY(-3px)"}
+            onMouseLeave={e => e.currentTarget.style.transform="translateY(0)"}
+          >
+            🏠 Kembali ke Kelas
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function QuizTaker({ assignment, user, existingSubmission }) {
   const navigate = useNavigate();
   const questions = assignment.quiz_questions || [];
-  const [phase, setPhase] = useState("intro"); // intro | playing | result
+  const [phase, setPhase] = useState("intro");
+  const sounds = useSounds(); // intro | playing | result
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState({});
   const [selected, setSelected] = useState(null);
@@ -168,6 +394,7 @@ export function QuizTaker({ assignment, user, existingSubmission }) {
 
   const handleAnswer = (optIdx) => {
     if (feedback !== null) return;
+    sounds.click();
     clearInterval(timerRef.current);
     const q = questions[current];
     const isCorrect = optIdx !== null && q.correct_answer === optIdx;
@@ -177,12 +404,34 @@ export function QuizTaker({ assignment, user, existingSubmission }) {
     setSelected(optIdx);
     setFeedback(optIdx === null ? "timeout" : isCorrect ? "correct" : "wrong");
     setAnswers(prev => ({ ...prev, [current]: optIdx }));
-    if (isCorrect) { setScore(s => s + earned); setStreak(s => s + 1); setPoints(p => [...p, earned]); }
-    else { setStreak(0); setPoints(p => [...p, 0]); }
+    if (isCorrect) {
+      setScore(s => s + earned);
+      setStreak(s => s + 1);
+      setPoints(p => [...p, earned]);
+      // 🎉 CONFETTI BURST
+      const newStreak = streak + 1;
+      const particleCount = newStreak >= 5 ? 200 : newStreak >= 3 ? 120 : 80;
+      sounds.correct();
+      confetti({
+        particleCount,
+        spread: 90,
+        origin: { y: 0.6 },
+        colors: ["#fbbf24", "#a78bfa", "#34d399", "#f87171", "#60a5fa", "#ec4899"],
+        ticks: 200,
+        scalar: newStreak >= 5 ? 1.3 : 1,
+      });
+      if (newStreak >= 5) {
+        // mega burst
+        setTimeout(() => confetti({ particleCount: 100, spread: 120, origin: { y: 0.5, x: 0.3 }, colors: ["#fbbf24", "#f97316"] }), 200);
+        setTimeout(() => confetti({ particleCount: 100, spread: 120, origin: { y: 0.5, x: 0.7 }, colors: ["#a78bfa", "#ec4899"] }), 400);
+      }
+    }
+    else { sounds.wrong(); setStreak(0); setPoints(p => [...p, 0]); }
     setTimeout(() => {
       setSelected(null); setFeedback(null);
       if (current + 1 >= questions.length) {
         setPhase("result");
+    sounds.finish();
         submitMutation.mutate({ ...answers, [current]: optIdx });
       } else {
         setCurrent(c => c + 1);
@@ -241,7 +490,7 @@ export function QuizTaker({ assignment, user, existingSubmission }) {
         ))}
       </div>
       <button
-        onClick={() => { setPhase("playing"); enterFullscreen(); }}
+        onClick={() => { setPhase("countdown"); enterFullscreen(); }}
         style={{ background: "linear-gradient(135deg, #7c3aed, #4f46e5)", color: "#fff", border: "none", padding: "18px 56px", fontSize: 20, fontWeight: 900, borderRadius: 14, cursor: "pointer", boxShadow: "0 8px 32px rgba(124,58,237,0.5)", letterSpacing: 1 }}
       >
         MULAI KUIS!
@@ -249,68 +498,30 @@ export function QuizTaker({ assignment, user, existingSubmission }) {
     </div>
   );
 
+  // ── COUNTDOWN (3-2-1-MULAI) ──
+  if (phase === "countdown") {
+    return <CountdownScreen onComplete={() => setPhase("playing")} onBeep={sounds.beep} onMulai={sounds.mulai} />;
+  }
+
   // ── RESULT ──
   if (phase === "result") {
     const correct = points.filter(p => p > 0).length;
     const pct = Math.round((correct / questions.length) * 100);
-    const emoji = pct >= 80 ? "🏆" : pct >= 60 ? "⭐" : pct >= 40 ? "👍" : "💪";
+    const grade = pct >= 90 ? { label:"S", color:"#fbbf24", glow:"rgba(251,191,36,0.6)", desc:"LUAR BIASA!" }
+                : pct >= 80 ? { label:"A", color:"#34d399", glow:"rgba(52,211,153,0.6)", desc:"KEREN BANGET!" }
+                : pct >= 60 ? { label:"B", color:"#60a5fa", glow:"rgba(96,165,250,0.6)", desc:"BAGUS!" }
+                : pct >= 40 ? { label:"C", color:"#f97316", glow:"rgba(249,115,22,0.6)", desc:"LUMAYAN!" }
+                :             { label:"D", color:"#f87171", glow:"rgba(248,113,113,0.6)", desc:"TETAP SEMANGAT!" };
     return (
-      <div style={{ position: "fixed", inset: 0, background: "#0a0a0f", zIndex: 9999, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 40, overflowY: "auto" }}>
-        <div style={{ textAlign: "center", width: "100%", maxWidth: 520 }}>
-          <div style={{ fontSize: 88, marginBottom: 12 }}>{emoji}</div>
-          <p style={{ color: "#6b6b8a", fontSize: 12, letterSpacing: 4, textTransform: "uppercase", marginBottom: 4 }}>Selesai!</p>
-          <p style={{ fontSize: 80, fontWeight: 900, margin: "0 0 4px", background: "linear-gradient(135deg, #a78bfa, #60a5fa)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{score}</p>
-          <p style={{ color: "#6b6b8a", fontSize: 16, marginBottom: 24 }}>{correct}/{questions.length} benar · {pct}%</p>
-          {cheatLog.length > 0 && (
-            <div style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 12, padding: "14px 18px", marginBottom: 20, textAlign: "left" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <AlertTriangle size={16} color="#f87171" />
-                <span style={{ color: "#f87171", fontWeight: 700, fontSize: 13 }}>{cheatLog.length} pelanggaran terdeteksi & dilaporkan ke guru</span>
-              </div>
-              {cheatLog.map((c, i) => (
-                <p key={i} style={{ color: "#fca5a5", fontSize: 11, margin: "3px 0" }}>• Soal {c.question}: {c.reason}</p>
-              ))}
-            </div>
-          )}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 24 }}>
-            {questions.map((q, i) => (
-              <div key={i} style={{ background: points[i] > 0 ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)", border: `1px solid ${points[i] > 0 ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`, borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 18 }}>{points[i] > 0 ? "✅" : "❌"}</span>
-                <div>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: points[i] > 0 ? "#34d399" : "#f87171", margin: 0 }}>Soal {i + 1}</p>
-                  <p style={{ fontSize: 12, color: points[i] > 0 ? "#6ee7b7" : "#fca5a5", margin: 0 }}>{points[i] > 0 ? `+${points[i]} poin` : "Salah"}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          {submitMutation.isPending && <p style={{ color: "#6b6b8a", fontSize: 13 }}>Menyimpan hasil...</p>}
-          <button
-            onClick={() => navigate(`/courses/${assignment.course_id}`)}
-            disabled={submitMutation.isPending}
-            style={{
-              marginTop: 8,
-              padding: "14px 32px",
-              borderRadius: 12,
-              border: "none",
-              background: "linear-gradient(135deg, #a78bfa, #60a5fa)",
-              color: "white",
-              fontSize: 15,
-              fontWeight: 700,
-              cursor: submitMutation.isPending ? "not-allowed" : "pointer",
-              opacity: submitMutation.isPending ? 0.5 : 1,
-              boxShadow: "0 8px 24px rgba(167,139,250,0.35)",
-              transition: "transform 0.2s",
-            }}
-            onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
-            onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
-          >
-            Kembali ke Kelas
-          </button>
-        </div>
-      </div>
+      <ResultScreen
+        score={score} correct={correct} total={questions.length} pct={pct}
+        grade={grade} points={points} questions={questions}
+        cheatLog={cheatLog} submitPending={submitMutation.isPending}
+        onBack={() => navigate(`/courses/${assignment.course_id}`)}
+        maxStreak={streak}
+      />
     );
   }
-
   // ── PLAYING (Full Screen Overlay) ──
   const q = questions[current];
   const timerPct = (timeLeft / 20) * 100;
@@ -320,6 +531,7 @@ export function QuizTaker({ assignment, user, existingSubmission }) {
     { bg: "linear-gradient(160deg, #7c3aed, #a855f7)", shadow: "rgba(168,85,247,0.35)" },
     { bg: "linear-gradient(160deg, #ea580c, #f97316)", shadow: "rgba(249,115,22,0.35)" },
     { bg: "linear-gradient(160deg, #0d9488, #14b8a6)", shadow: "rgba(20,184,166,0.35)" },
+    { bg: "linear-gradient(160deg, #2563eb, #60a5fa)", shadow: "rgba(96,165,250,0.35)" },
   ];
 
   const getFeedbackStyle = (oi) => {
@@ -409,6 +621,30 @@ export function QuizTaker({ assignment, user, existingSubmission }) {
         <p style={{ color: "#4b4b6a", fontSize: 12, marginTop: 10 }}>{q.points || 10} poin maks</p>
       </div>
 
+      {/* ── FLOATING POINTS ── */}
+      {feedback === "correct" && points[points.length - 1] > 0 && (
+        <div style={{
+          position: "fixed",
+          top: "40%", left: "50%",
+          transform: "translate(-50%, -50%)",
+          fontSize: "clamp(60px, 10vw, 120px)",
+          fontWeight: 900,
+          color: "#fbbf24",
+          textShadow: "0 0 40px rgba(251,191,36,0.8), 0 0 80px rgba(251,191,36,0.4)",
+          animation: "floatPoints 1.5s cubic-bezier(.22,1,.36,1) forwards",
+          pointerEvents: "none",
+          zIndex: 10000,
+          fontFamily: "Georgia, serif",
+        }}>
+          +{points[points.length - 1]}
+          {streak >= 3 && (
+            <div style={{ fontSize: "0.3em", color: "#f87171", textShadow: "0 0 20px rgba(248,113,113,0.8)", marginTop: 8, fontWeight: 800 }}>
+              🔥 STREAK BONUS!
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── FEEDBACK BANNER ── */}
       {feedback && (
         <div style={{ textAlign: "center", padding: "12px 24px", fontSize: 18, fontWeight: 900, color: feedback === "correct" ? "#34d399" : "#f87171", background: feedback === "correct" ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", borderTop: `1px solid ${feedback === "correct" ? "rgba(16,185,129,0.2)" : "rgba(239,68,68,0.2)"}`, flexShrink: 0 }}>
@@ -416,8 +652,17 @@ export function QuizTaker({ assignment, user, existingSubmission }) {
         </div>
       )}
 
-      {/* ── 4 OPTION TILES ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", flexShrink: 0 }}>
+      {/* ── OPTION TILES (adaptive 2x2 / 2x3 / 1xN) ── */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: (q.options || []).length === 5
+          ? "1fr 1fr 1fr"
+          : (q.options || []).length === 3
+            ? "1fr 1fr 1fr"
+            : "1fr 1fr",
+        gridTemplateRows: (q.options || []).length === 5 ? "1fr 1fr" : "auto",
+        flexShrink: 0,
+      }}>
         {(q.options || []).map((opt, oi) => {
           const c = OPTION_COLORS[oi % OPTION_COLORS.length];
           return (
@@ -456,6 +701,12 @@ export function QuizTaker({ assignment, user, existingSubmission }) {
 
       <style>{`
         @keyframes slideDown { from { transform: translateY(-100%); opacity:0; } to { transform: translateY(0); opacity:1; } }
+        @keyframes floatPoints {
+          0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; }
+          20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+          40% { transform: translate(-50%, -60%) scale(1); opacity: 1; }
+          100% { transform: translate(-50%, -180%) scale(0.8); opacity: 0; }
+        }
       `}</style>
     </div>
   );

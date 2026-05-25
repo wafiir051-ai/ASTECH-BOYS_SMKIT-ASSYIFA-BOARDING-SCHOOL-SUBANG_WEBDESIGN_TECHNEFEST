@@ -4,6 +4,7 @@ import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { ThemeProvider } from '@/lib/ThemeContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AppLayout from '@/components/layout/AppLayout';
@@ -17,6 +18,9 @@ import CourseDetail from '@/pages/CourseDetail';
 import AssignmentDetail from '@/pages/AssignmentDetail';
 import QuizBuilder from '@/pages/QuizBuilder';
 import QuizPlay from '@/pages/QuizPlay';
+import GameLobby from '@/pages/GameLobby';
+import GamePlay from '@/pages/GamePlay';
+import GameResult from '@/pages/GameResult';
 import Assignments from '@/pages/Assignments';
 import MyAssignments from '@/pages/MyAssignments';
 import Grades from '@/pages/Grades';
@@ -54,6 +58,9 @@ const AuthenticatedApp = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<ProtectedRoute user={user} />}>
         <Route path="/quiz/:assignmentId/play" element={<QuizPlay />} />
+        <Route path="/game/:assignmentId/lobby" element={<GameLobby />} />
+        <Route path="/game/:roomCode/play" element={<GamePlay />} />
+        <Route path="/game/:roomCode/result" element={<GameResult />} />
         <Route element={<AppLayout user={user} />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/courses" element={<Courses />} />
@@ -78,14 +85,16 @@ const AuthenticatedApp = () => {
 
 function App() {
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <AuthenticatedApp />
+          </Router>
+          <Toaster />
+        </QueryClientProvider>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 export default App

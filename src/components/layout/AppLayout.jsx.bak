@@ -34,9 +34,9 @@ export default function AppLayout({ user }) {
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-main, #edf2ef)", display: "flex", position: "relative" }}>
+    <div style={{ minHeight: "100vh", background: "#edf2ef", display: "flex", position: "relative" }}>
       <AnimatedBackground3D />
-      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "var(--bg-overlay, rgba(237,242,239,0.72))" }} />
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none", background: "rgba(237,242,239,0.72)" }} />
 
       <style>{`
         @keyframes pageEnter {
